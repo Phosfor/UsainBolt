@@ -5,6 +5,10 @@
  *      Author: gfu-mri
  */
 
-int main() {
+#include "LCD.h"
 
+LCD lcd;
+
+int main() {
+	lcd.print("Hello World!!!");
 }
