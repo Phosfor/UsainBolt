@@ -8,6 +8,11 @@
 #include "LCD.h"
 
 LCD::LCD() {
+
+	//Disable Watchdog
+	MCUCSR |= (1<<JTD);
+	MCUCSR |= (1<<JTD);
+
 	// verwendete Pins auf Ausgang schalten
 	uint8_t pins = (0x0F << LCD_DB) |           // 4 Datenleitungen
 				   (1<<LCD_RS) |                // R/S Leitung
@@ -18,26 +23,26 @@ LCD::LCD() {
 	LCD_PORT &= ~pins;
 
 	// warten auf die Bereitschaft des LCD
-	_delay_ms( 15 );
+	_delay_ms( LCD_BOOTUP_MS );
 
 	// Soft-Reset muss 3mal hintereinander gesendet werden zur Initialisierung
 	out4( LCD_SOFT_RESET );
-	_delay_ms( 5 );
+	_delay_ms( LCD_SOFT_RESET_MS1 );
 
 	enablePulse();
-	_delay_ms( 1 );
+	_delay_ms( LCD_SOFT_RESET_MS2 );
 
 	enablePulse();
-	_delay_ms( 1 );
+	_delay_ms( LCD_SOFT_RESET_MS3 );
 
 	// 4-bit Modus aktivieren
 	out4( LCD_SET_FUNCTION |
 		  LCD_FUNCTION_4BIT );
-	_delay_ms( 5 );
+	_delay_ms( LCD_SET_4BITMODE_MS );
 
-	// 4-bit Modus / 2 Zeilen / 5x7
+	//2 Zeilen / 5x7
 	sendCommand( LCD_SET_FUNCTION |
-			 	 LCD_FUNCTION_4BIT |
+            	 LCD_FUNCTION_4BIT |
 			 	 LCD_FUNCTION_2LINE |
 			 	 LCD_FUNCTION_5X7 );
 
@@ -55,15 +60,11 @@ LCD::LCD() {
 	clear();
 }
 
-LCD::~LCD() {
-	// TODO Auto-generated destructor stub
-}
-
 // Erzeugt einen Enable-Puls
 void LCD::enablePulse()
 {
     LCD_PORT |= (1<<LCD_EN);     // Enable auf 1 setzen
-    _delay_us( 1 );  // kurze Pause
+    _delay_us( LCD_ENABLE_US );  // kurze Pause
     LCD_PORT &= ~(1<<LCD_EN);    // Enable auf 0 setzen
 }
 
@@ -85,7 +86,7 @@ void LCD::sendData( uint8_t data )
     out4( data );            // zuerst die oberen,
     out4( data<<4 );         // dann die unteren 4 Bit senden
 
-    _delay_us( 46 );
+    _delay_us( LCD_WRITEDATA_US );
 }
 
 // Sendet einen Befehl an das LCD
@@ -96,21 +97,21 @@ void LCD::sendCommand( uint8_t data )
     out4( data );             // zuerst die oberen,
     out4( data<<4 );           // dann die unteren 4 Bit senden
 
-    _delay_us( 42 );
+    _delay_us( LCD_COMMAND_US );
 }
 
 // Sendet den Befehl zur Löschung des Displays
 void LCD::clear( void )
 {
     sendCommand( LCD_CLEAR_DISPLAY );
-    _delay_ms( 2 );
+    _delay_ms( LCD_CLEAR_DISPLAY_MS );
 }
 
 // Sendet den Befehl: Cursor Home
 void LCD::home( void )
 {
 	sendCommand( LCD_CURSOR_HOME );
-    _delay_ms( 2 );
+    _delay_ms( LCD_CURSOR_HOME_MS );
 }
 
 void LCD::setCursor(uint8_t column, uint8_t row)
@@ -123,13 +124,13 @@ void LCD::setCursor(uint8_t column, uint8_t row)
 	uint8_t data = LCD_SET_DDADR;
 	switch(row)
 	{
-	case 1:
+	case 0:
 		data += LCD_DDADR_LINE1; break;
-	case 2:
+	case 1:
 		data += LCD_DDADR_LINE2; break;/*
-	case 3:
+	case 2:
 		data += LCD_DDADR_LINE3; break;
-	case 4:
+	case 3:
 		data += LCD_DDADR_LINE4; break;*/
 	}
 	data += column;
