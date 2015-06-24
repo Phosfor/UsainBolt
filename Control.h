@@ -32,13 +32,19 @@ class Control {
 private:
 	int8_t value;
 	int8_t last;
+
+	bool updateDeltaButtons;
 public:
 	Control();
 
 	bool update(); //Should be called pretty often ;D
 
 	int8_t getValue() const;
-	int8_t getButtons() const;
+	uint8_t getButtons() const;
+
+	uint8_t getDeltaButtons();
+
+	void resetValue();
 };
 
 #endif /* CONTROL_H_ */

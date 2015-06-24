@@ -33,6 +33,8 @@ Control::Control() {
 }
 
 bool Control::update() {
+	updateDeltaButtons = true;
+
 	int8_t current = 0;
 	if(DGB_PIN & (1<<DGB_A))
 		current = 3;
@@ -51,6 +53,22 @@ int8_t Control::getValue() const {
 	return value;
 }
 
-int8_t Control::getButtons() const {
-	return (SW_PIN & (1<<SW_A)) | (SW_PIN & (1<<SW_A));// | (SW_PIN & (1<<SW_1))
+uint8_t Control::getButtons() const {
+	return ~(SW_PIN & ((1<<SW_A) | (1<<SW_B)));// | (SW_PIN & (1<<SW_1))
+}
+
+void Control::resetValue() {
+	value = 0;
+}
+
+uint8_t Control::getDeltaButtons() {
+	static uint8_t res = 0;
+	static uint8_t last = getButtons();
+	if(updateDeltaButtons) {
+		updateDeltaButtons = false;
+		uint8_t current = getButtons();
+		res = last & ~current;
+		last = current;
+	}
+	return res;
 }

@@ -7,6 +7,8 @@
 
 #include "LCD.h"
 #include "Control.h"
+#include "Menu.h"
+
 #include <avr/interrupt.h>
 
 #include <stdlib.h>
@@ -75,23 +77,27 @@ ISR(TIMER0_OVF_vect)
 {
 }
 
-int main() {
+float test1, test21, test22;
+FloatMenu test1Menu("Test1", &test1, 0.1f);
+FloatMenu test21Menu("Test2->1", &test21, 0.01f);
+FloatMenu test22Menu("Test2->2", &test22, 0.5f);
 
-	char tmp[8];
+Menu* t2Children[2] = {&test21Menu, &test22Menu};
+SubMenu test2Menu("Test2", t2Children, 2);
+
+Menu* mmChildren[2] = {&test1Menu, &test2Menu};
+SubMenu mainMenu("Main-Menu", mmChildren, 2);
+
+int main() {
 
 	initialize();
 	sei();
+
+	mainMenu.display(lcd);
+
 	while(1) {
-		lcd.clear();
+		if(mainMenu.update(ctrl)) mainMenu.display(lcd);
 
-		lcd.print(itoa(ctrl.getValue()>>2, tmp, 10));
-		lcd.setCursor(5, 0);
-		lcd.print(itoa(x, tmp, 10));
-
-		if(!(ctrl.getButtons() & (1<<SW_A))) {
-			lcd.setCursor(0, 1);
-			lcd.print("Button");
-		}
 		_delay_ms(50);
 	}
 }
