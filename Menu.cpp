@@ -27,7 +27,7 @@ const char* Menu::getName() const {
 
 ///////////////////////////////////////
 
-SubMenu::SubMenu(const char* name, Menu** children, const uint8_t count) : Menu(name), children(children), count(count) {
+SubMenu::SubMenu(const char* name, Menu** children, const uint8_t count) : Menu(name), children(children), count(count), select(0), inSubMenu(false) {
 
 }
 
@@ -66,6 +66,11 @@ bool SubMenu::update(Control& ctrl) {
 	return false;
 }
 
+bool SubMenu::isInSubMenu(const Menu* menu) const {
+	if(!inSubMenu) return false;
+	if(!menu) return true;
+	return children[select] == menu;
+}
 
 /////////////////////////////////////////
 
@@ -91,4 +96,17 @@ bool FloatMenu::update(Control& ctrl) {
 		return true;
 	}
 	return false;
+}
+
+/////////////////////////////////////////////
+
+PidMenu::PidMenu(const char* name, PID<float>& pid)
+	: SubMenu(name, pParams, 3),
+	  params{
+		{"kP", &pid.kP, 0.1},
+		{"kI", &pid.kI, 0.1},
+		{"kD", &pid.kD, 0.1}
+	  },
+	  pParams{&params[0], &params[1], &params[2]}
+	{
 }

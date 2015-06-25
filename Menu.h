@@ -9,6 +9,7 @@
 #define MENU_H_
 
 #include <stdint.h>
+#include "PID.h"
 
 class LCD;
 class Control;
@@ -36,6 +37,8 @@ public:
 
 	virtual void display(LCD& lcd) override;
 	virtual bool update(Control& ctrl) override;
+
+	bool isInSubMenu(const Menu* subMenu) const;
 };
 
 class FloatMenu : public Menu {
@@ -47,6 +50,14 @@ public:
 
 	virtual void display(LCD& lcd) override;
 	virtual bool update(Control& ctrl) override;
+};
+
+class PidMenu : public SubMenu {
+private:
+	FloatMenu params[3];
+	Menu* pParams[3];
+public:
+	PidMenu(const char* name, PID<float>& pid);
 };
 
 #endif /* MENU_H_ */

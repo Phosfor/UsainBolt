@@ -17,10 +17,12 @@
 template<class T>
 class PID {
 private:
-	T kP, kI, kD;
 	T lastValue;
 	T sum;
 public:
+
+	T kP, kI, kD;
+
 	PID(T kP, T kI, T kD) : kP(kP), kI(kI), kD(kD) {}
 	T update(T setpoint, T value) {
 		T error = setpoint - value;
