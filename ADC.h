@@ -14,6 +14,7 @@
 class Adc {
 public:
 	static volatile uint16_t AD0_links, AD1_rechts;
+	static void init();
 };
 
 #endif /* ADC_H_ */

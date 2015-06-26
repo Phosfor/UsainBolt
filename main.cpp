@@ -14,21 +14,26 @@
 
 #include <stdlib.h>
 
+#define MAX_LENKUNG 800
+
 LCD lcd;
 Control ctrl;
 
-float speed, sollSpeed;
+int speed, sollSpeed;
 
-float lenkung;
-FloatMenu lenkungMenu("Lenkung", &lenkung, 0.01);
+int lenkung;
+NumberMenu<int> lenkungMenu("Lenkung", &lenkung);
 
-float power;
-FloatMenu powerMenu("Power", &power, 0.05);
+int power = 25;
+NumberMenu<int> powerMenu("Power", &power);
 
-PID<float> lenkungPid(0.0, 0.0, 0.0);
+uint16_t minAdc = 7;
+NumberMenu<uint16_t> minAdcMenu("MinAdc", &minAdc);
+
+PID<int> lenkungPid(35, 1, 3);
 PidMenu lenkungPidMenu("Lenkung", lenkungPid);
 
-PID<float> powerPid(0.0, 0.0, 0.0);
+PID<int> powerPid(0, 0, 0);
 PidMenu powerPidMenu("Power", powerPid);
 
 Menu* mcsub[] = {
@@ -43,11 +48,22 @@ Menu* pidsub[] = {
 };
 SubMenu pidMenu("PID", pidsub, 2);
 
+NumberMenu<volatile uint16_t> ad0Menu("AD0 Links", &Adc::AD0_links, false);
+NumberMenu<volatile uint16_t> ad1Menu("AD1 Rechts", &Adc::AD1_rechts, false);
+
+Menu* viewsub[] = {
+		&ad0Menu,
+		&ad1Menu
+};
+SubMenu viewMenu("View", viewsub, 2);
+
 Menu* mmsub[] = {
 	&manualMenu,
-	&pidMenu
+	&viewMenu,
+	&pidMenu,
+	&minAdcMenu
 };
-SubMenu mainMenu("Main", mmsub, 2);
+SubMenu mainMenu("Main", mmsub, 4);
 
 void initialize()
 {
@@ -100,24 +116,33 @@ void initialize()
 ISR(TIMER2_OVF_vect) {
 	ctrl.update();
 
-	int16_t adc_diff = Adc::AD0_links - Adc::AD1_rechts;
+	uint16_t adcSum = Adc::AD0_links + Adc::AD1_rechts;
+	if(adcSum > minAdc) {
+		if(!(PORTD & (1<<PD6)))
+			lenkungPid.resetSum();
+		PORTD |= (1<<PD6);
+	}
+	else
+		PORTD &= ~(1<<PD6);
+
+	int16_t adcDiff = Adc::AD0_links - Adc::AD1_rechts;
 
 	if(!mainMenu.isInSubMenu(&manualMenu)) {
-		//lenkung = lenkungPid.update(0, adc_diff);
-		power = powerPid.update(sollSpeed, 0);
+		lenkung = lenkungPid.update(0, adcDiff);
+		//power = powerPid.update(sollSpeed, 0);
 	}
 
-	if(lenkung < -1.0f) lenkung = -1.0f;
-	else if(lenkung > 1.0f) lenkung = 1.0f;
+	if(lenkung < -MAX_LENKUNG) lenkung = -1000;
+	else if(lenkung > MAX_LENKUNG) lenkung = 1000;
 
-	OCR1A = 2000 + (int)(lenkung * 1000);
+	OCR1A = 2200 + lenkung;
 
 
 
-	if(power > 0.95f) power = 0.95f;
-	else if(power < 0.0f) power = 0.0f;
+	if(power > 200) power = 200;
+	else if(power < 0) power = 0;
 
-	OCR2 = power * 255;
+	OCR2 = power;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////
@@ -130,14 +155,16 @@ ISR(TIMER0_OVF_vect)
 int main() {
 
 	initialize();
+	Adc::init();
 	sei();
-	//ADCSRA |= (1<<ADSC);  // ADC starten
+	ADCSRA |= (1<<ADSC);  // ADC starten
 	PORTD |= (1<<PD6);
 
 	mainMenu.display(lcd);
 
 	while(1) {
-		if(mainMenu.update(ctrl)) mainMenu.display(lcd);
+		mainMenu.update(ctrl);
+		mainMenu.display(lcd);
 
 		_delay_ms(50);
 	}

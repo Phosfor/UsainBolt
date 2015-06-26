@@ -8,11 +8,14 @@
 #ifndef MENU_H_
 #define MENU_H_
 
-#include <stdint.h>
 #include "PID.h"
+#include "LCD.h"
+#include "Control.h"
 
-class LCD;
-class Control;
+#include "util.h" //ftoa
+
+#include <stdlib.h>
+#include <stdint.h>
 
 class Menu {
 private:
@@ -21,7 +24,7 @@ public:
 	Menu(const char* name);
 
 	virtual void display(LCD& lcd);
-	virtual bool update(Control& ctrl);
+	virtual bool update(Control& ctrl) { return false; };
 
 	const char* getName() const;
 };
@@ -41,12 +44,13 @@ public:
 	bool isInSubMenu(const Menu* subMenu) const;
 };
 
-class FloatMenu : public Menu {
+template<class T>
+class NumberMenu : public Menu {
 private:
-	float* pValue;
-	const float factor;
+	T* pValue;
+	bool editable;
 public:
-	FloatMenu(const char* name, float* pValue, const float factor);
+	NumberMenu(const char* name, T* pValue, bool editable = true);
 
 	virtual void display(LCD& lcd) override;
 	virtual bool update(Control& ctrl) override;
@@ -54,10 +58,40 @@ public:
 
 class PidMenu : public SubMenu {
 private:
-	FloatMenu params[3];
-	Menu* pParams[3];
+	NumberMenu<int> params[4];
+	Menu* pParams[4];
 public:
-	PidMenu(const char* name, PID<float>& pid);
+	PidMenu(const char* name, PID<int>& pid);
 };
+
+/////////////////////////////////////////
+
+template<class T>
+NumberMenu<T>::NumberMenu(const char* name, T* pValue, bool editable) : Menu(name), pValue(pValue), editable(editable) {
+
+}
+
+template<class T>
+void NumberMenu<T>::display(LCD& lcd) {
+	Menu::display(lcd);
+	lcd.setCursor(0, 1);
+
+	char tmp[16];
+
+	itoa(*pValue, tmp, 10);
+	lcd.print(tmp);
+}
+
+template<class T>
+bool NumberMenu<T>::update(Control& ctrl) {
+	if(!editable) return false;
+	int8_t delta = ctrl.getValue() >> 1;
+	if(delta) {
+		*pValue += delta;
+		ctrl.resetValue();
+		return true;
+	}
+	return false;
+}
 
 #endif /* MENU_H_ */
